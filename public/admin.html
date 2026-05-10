@@ -55,13 +55,19 @@
             </div>
 
             <div class="form-group">
-                <label for="poster">Movie Poster (Image):</label>
-                <input type="file" id="poster" name="poster" accept="image/*" required>
+                <label>Movie Poster (Image):</label>
+                <p style="font-size: 12px; color: #666; margin-top: 0;">Provide either an image URL OR upload a file.</p>
+                <input type="url" id="poster_url" name="poster_url" placeholder="Paste image link here (e.g. from Google Drive)">
+                <p style="text-align: center; margin: 5px 0;">OR</p>
+                <input type="file" id="poster" name="poster" accept="image/*">
             </div>
 
             <div class="form-group">
-                <label for="video">Movie File (Video):</label>
-                <input type="file" id="video" name="video" accept="video/*" required>
+                <label>Movie File (Video):</label>
+                <p style="font-size: 12px; color: #666; margin-top: 0;">Provide either a video URL (Google Drive) OR upload a file.</p>
+                <input type="url" id="video_url" name="video_url" placeholder="Paste Google Drive video link here">
+                <p style="text-align: center; margin: 5px 0;">OR</p>
+                <input type="file" id="video" name="video" accept="video/*">
             </div>
 
             <button type="submit">Upload Movie</button>
@@ -75,6 +81,22 @@
 
             const form = e.target;
             const formData = new FormData(form);
+
+            // Validation: Ensure either URL or File is provided
+            const videoFile = document.getElementById('video').files.length > 0;
+            const videoUrl = document.getElementById('video_url').value.trim() !== '';
+            const posterFile = document.getElementById('poster').files.length > 0;
+            const posterUrl = document.getElementById('poster_url').value.trim() !== '';
+
+            if (!videoFile && !videoUrl) {
+                alert('Please provide either a Video File or a Video URL.');
+                return;
+            }
+            if (!posterFile && !posterUrl) {
+                alert('Please provide either a Poster File or a Poster URL.');
+                return;
+            }
+
             const statusDiv = document.getElementById('status');
             const submitBtn = form.querySelector('button');
 

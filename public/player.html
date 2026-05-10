@@ -46,13 +46,35 @@
                 const container = document.getElementById('player-container');
                 container.innerHTML = '';
 
-                const video = document.createElement('video');
-                video.controls = true;
-                video.autoplay = true;
-                const source = document.createElement('source');
-                source.src = movie.video_url;
-                source.type = 'video/mp4';
-                video.appendChild(source);
+                // Helper to detect and convert Google Drive share links to preview links
+                const isGoogleDrive = movie.video_url.includes('drive.google.com');
+
+                if (isGoogleDrive) {
+                    const iframe = document.createElement('iframe');
+
+                    // Try to convert standard viewing link to preview link if needed
+                    let embedUrl = movie.video_url;
+                    if (embedUrl.includes('/view')) {
+                        embedUrl = embedUrl.replace('/view', '/preview');
+                    }
+
+                    iframe.src = embedUrl;
+                    iframe.width = '100%';
+                    iframe.height = '500px';
+                    iframe.frameBorder = '0';
+                    iframe.allow = 'autoplay';
+                    iframe.allowFullscreen = true;
+                    container.appendChild(iframe);
+                } else {
+                    const video = document.createElement('video');
+                    video.controls = true;
+                    video.autoplay = true;
+                    const source = document.createElement('source');
+                    source.src = movie.video_url;
+                    source.type = 'video/mp4';
+                    video.appendChild(source);
+                    container.appendChild(video);
+                }
 
                 const infoDiv = document.createElement('div');
                 infoDiv.className = 'movie-info';
@@ -73,7 +95,6 @@
                 infoDiv.appendChild(genreDiv);
                 infoDiv.appendChild(descDiv);
 
-                container.appendChild(video);
                 container.appendChild(infoDiv);
 
             } catch (error) {

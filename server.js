@@ -64,18 +64,27 @@ app.get('/api/movies/:id', (req, res) => {
 
 // Upload a new movie
 app.post('/api/movies', upload.fields([{ name: 'video', maxCount: 1 }, { name: 'poster', maxCount: 1 }]), (req, res) => {
-    const { title, genre, description } = req.body;
+    const { title, genre, description, video_url, poster_url } = req.body;
 
-    if (!req.files || !req.files.video || !req.files.poster) {
-        return res.status(400).json({ error: 'Both video and poster files are required' });
+    let finalVideoUrl = video_url;
+    let finalPosterUrl = poster_url;
+
+    // Use uploaded file if present, otherwise use the provided URL
+    if (req.files && req.files.video) {
+        finalVideoUrl = '/uploads/' + req.files.video[0].filename;
     }
 
-    const videoUrl = '/uploads/' + req.files.video[0].filename;
-    const posterUrl = '/uploads/' + req.files.poster[0].filename;
+    if (req.files && req.files.poster) {
+        finalPosterUrl = '/uploads/' + req.files.poster[0].filename;
+    }
+
+    if (!finalVideoUrl || !finalPosterUrl) {
+        return res.status(400).json({ error: 'Both video and poster (either file or URL) are required' });
+    }
 
     db.run(
         'INSERT INTO movies (title, genre, description, video_url, poster_url) VALUES (?, ?, ?, ?, ?)',
-        [title, genre, description, videoUrl, posterUrl],
+        [title, genre, description, finalVideoUrl, finalPosterUrl],
         function (err) {
             if (err) {
                 res.status(500).json({ error: err.message });
