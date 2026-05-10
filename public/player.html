@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player - WORST FTP</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: white;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        header {
+            width: 100%;
+            padding: 20px;
+            text-align: left;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            box-sizing: border-box;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        header a {
+            color: #00ffcc;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 20px;
+            text-shadow: 0 0 5px #00ffcc;
+            transition: color 0.3s;
+        }
+        header a:hover { color: #ff00ff; text-shadow: 0 0 10px #ff00ff; }
+        #player-container {
+            width: 90%;
+            max-width: 1100px;
+            margin-top: 40px;
+            margin-bottom: 40px;
+        }
+        video, iframe {
+            width: 100%;
+            border-radius: 15px;
+            outline: none;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5), 0 0 20px rgba(0, 255, 204, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background-color: #000;
+        }
+        .movie-info {
+            margin-top: 30px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        .title {
+            font-size: 32px;
+            margin-bottom: 10px;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        .tags {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tag {
+            background: #ff00ff;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            box-shadow: 0 0 10px #ff00ff;
+            text-transform: capitalize;
+        }
+        .tag.quality { background: #00ffcc; box-shadow: 0 0 10px #00ffcc; color: #000; }
+        .description { line-height: 1.8; color: #e0e0e0; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="/">&larr; Back to Home</a>
+    </header>
+
+    <div id="player-container">
+        <!-- Video player and info will be injected here -->
+        <h2 id="loading">Loading...</h2>
+    </div>
+
+    <script>
+        async function fetchMovie() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const id = urlParams.get('id');
+
+            if (!id) {
+                document.getElementById('player-container').innerHTML = '<h2>Movie ID not provided.</h2>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/movies/${id}`);
+                if (!response.ok) {
+                    throw new Error('Movie not found');
+                }
+                const movie = await response.json();
+
+                const container = document.getElementById('player-container');
+                container.innerHTML = '';
+
+                // Helper to detect and convert Google Drive share links to preview links
+                const isGoogleDrive = movie.video_url.includes('drive.google.com');
+
+                if (isGoogleDrive) {
+                    const iframe = document.createElement('iframe');
+
+                    // Try to convert standard viewing link to preview link if needed
+                    let embedUrl = movie.video_url;
+                    if (embedUrl.includes('/view')) {
+                        embedUrl = embedUrl.replace('/view', '/preview');
+                    }
+
+                    iframe.src = embedUrl;
+                    iframe.width = '100%';
+                    iframe.height = '500px';
+                    iframe.frameBorder = '0';
+                    iframe.allow = 'autoplay';
+                    iframe.allowFullscreen = true;
+                    container.appendChild(iframe);
+                } else {
+                    const video = document.createElement('video');
+                    video.controls = true;
+                    video.autoplay = true;
+                    const source = document.createElement('source');
+                    source.src = movie.video_url;
+                    source.type = 'video/mp4';
+                    video.appendChild(source);
+                    container.appendChild(video);
+                }
+
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'movie-info';
+
+                const titleDiv = document.createElement('div');
+                titleDiv.className = 'title';
+                titleDiv.textContent = movie.title;
+
+                const tagsDiv = document.createElement('div');
+                tagsDiv.className = 'tags';
+
+                const genreTag = document.createElement('div');
+                genreTag.className = 'tag';
+                genreTag.textContent = movie.genre;
+
+                const qualityTag = document.createElement('div');
+                qualityTag.className = 'tag quality';
+                qualityTag.textContent = movie.quality || '1080p';
+
+                tagsDiv.appendChild(genreTag);
+                tagsDiv.appendChild(qualityTag);
+
+                const descDiv = document.createElement('div');
+                descDiv.className = 'description';
+                descDiv.textContent = movie.description;
+
+                infoDiv.appendChild(titleDiv);
+                infoDiv.appendChild(tagsDiv);
+                infoDiv.appendChild(descDiv);
+
+                container.appendChild(infoDiv);
+
+            } catch (error) {
+                console.error('Error fetching movie:', error);
+                document.getElementById('player-container').innerHTML = `<h2>Error: ${error.message}</h2>`;
+            }
+        }
+
+        fetchMovie();
+    </script>
+</body>
+</html>
