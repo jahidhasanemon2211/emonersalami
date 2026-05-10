@@ -3,17 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Player - Movie Server</title>
+    <title>Player - WORST FTP</title>
     <style>
-        body { font-family: sans-serif; background-color: #000; color: white; margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
-        header { width: 100%; padding: 20px; text-align: left; background-color: #111; box-sizing: border-box; }
-        header a { color: #E50914; text-decoration: none; font-weight: bold; font-size: 20px; }
-        #player-container { width: 80%; max-width: 1000px; margin-top: 30px; }
-        video { width: 100%; border-radius: 8px; outline: none; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        .movie-info { margin-top: 20px; }
-        .title { font-size: 24px; margin-bottom: 5px; }
-        .genre { color: #aaa; font-size: 14px; margin-bottom: 15px; text-transform: capitalize;}
-        .description { line-height: 1.5; color: #ddd; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: white;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        header {
+            width: 100%;
+            padding: 20px;
+            text-align: left;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            box-sizing: border-box;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        header a {
+            color: #00ffcc;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 20px;
+            text-shadow: 0 0 5px #00ffcc;
+            transition: color 0.3s;
+        }
+        header a:hover { color: #ff00ff; text-shadow: 0 0 10px #ff00ff; }
+        #player-container {
+            width: 90%;
+            max-width: 1100px;
+            margin-top: 40px;
+            margin-bottom: 40px;
+        }
+        video, iframe {
+            width: 100%;
+            border-radius: 15px;
+            outline: none;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5), 0 0 20px rgba(0, 255, 204, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background-color: #000;
+        }
+        .movie-info {
+            margin-top: 30px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        .title {
+            font-size: 32px;
+            margin-bottom: 10px;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        .tags {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tag {
+            background: #ff00ff;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            box-shadow: 0 0 10px #ff00ff;
+            text-transform: capitalize;
+        }
+        .tag.quality { background: #00ffcc; box-shadow: 0 0 10px #00ffcc; color: #000; }
+        .description { line-height: 1.8; color: #e0e0e0; font-size: 16px; }
     </style>
 </head>
 <body>
@@ -83,16 +148,26 @@
                 titleDiv.className = 'title';
                 titleDiv.textContent = movie.title;
 
-                const genreDiv = document.createElement('div');
-                genreDiv.className = 'genre';
-                genreDiv.textContent = 'Genre: ' + movie.genre;
+                const tagsDiv = document.createElement('div');
+                tagsDiv.className = 'tags';
+
+                const genreTag = document.createElement('div');
+                genreTag.className = 'tag';
+                genreTag.textContent = movie.genre;
+
+                const qualityTag = document.createElement('div');
+                qualityTag.className = 'tag quality';
+                qualityTag.textContent = movie.quality || '1080p';
+
+                tagsDiv.appendChild(genreTag);
+                tagsDiv.appendChild(qualityTag);
 
                 const descDiv = document.createElement('div');
                 descDiv.className = 'description';
                 descDiv.textContent = movie.description;
 
                 infoDiv.appendChild(titleDiv);
-                infoDiv.appendChild(genreDiv);
+                infoDiv.appendChild(tagsDiv);
                 infoDiv.appendChild(descDiv);
 
                 container.appendChild(infoDiv);

@@ -4,6 +4,7 @@ const path = require('path');
 const cors = require('cors');
 const db = require('./db');
 const fs = require('fs');
+const basicAuth = require('express-basic-auth');
 
 const app = express();
 const port = 3000;
@@ -12,6 +13,16 @@ const port = 3000;
 app.use(cors());
 // Parse JSON bodies
 app.use(express.json());
+
+// Set up Admin Authentication
+const adminAuth = basicAuth({
+    users: { 'admin': 'admin123' }, // Default username: admin, password: admin123
+    challenge: true,
+    realm: 'WORST FTP Admin Panel',
+});
+
+// Protect the admin page html
+app.use('/admin.html', adminAuth);
 
 // Setup storage for Multer
 const storage = multer.diskStorage({
@@ -62,9 +73,9 @@ app.get('/api/movies/:id', (req, res) => {
     });
 });
 
-// Upload a new movie
-app.post('/api/movies', upload.fields([{ name: 'video', maxCount: 1 }, { name: 'poster', maxCount: 1 }]), (req, res) => {
-    const { title, genre, description, video_url, poster_url } = req.body;
+// Upload a new movie (Protected)
+app.post('/api/movies', adminAuth, upload.fields([{ name: 'video', maxCount: 1 }, { name: 'poster', maxCount: 1 }]), (req, res) => {
+    const { title, genre, description, video_url, poster_url, quality } = req.body;
 
     let finalVideoUrl = video_url;
     let finalPosterUrl = poster_url;
@@ -82,9 +93,11 @@ app.post('/api/movies', upload.fields([{ name: 'video', maxCount: 1 }, { name: '
         return res.status(400).json({ error: 'Both video and poster (either file or URL) are required' });
     }
 
+    const finalQuality = quality || '1080p';
+
     db.run(
-        'INSERT INTO movies (title, genre, description, video_url, poster_url) VALUES (?, ?, ?, ?, ?)',
-        [title, genre, description, finalVideoUrl, finalPosterUrl],
+        'INSERT INTO movies (title, genre, description, video_url, poster_url, quality) VALUES (?, ?, ?, ?, ?, ?)',
+        [title, genre, description, finalVideoUrl, finalPosterUrl, finalQuality],
         function (err) {
             if (err) {
                 res.status(500).json({ error: err.message });
@@ -93,6 +106,36 @@ app.post('/api/movies', upload.fields([{ name: 'video', maxCount: 1 }, { name: '
             res.json({ id: this.lastID, message: 'Movie uploaded successfully' });
         }
     );
+});
+
+// Update a movie (Protected)
+app.put('/api/movies/:id', adminAuth, (req, res) => {
+    const id = req.params.id;
+    const { title, genre, description, quality } = req.body;
+
+    db.run(
+        'UPDATE movies SET title = ?, genre = ?, description = ?, quality = ? WHERE id = ?',
+        [title, genre, description, quality, id],
+        function (err) {
+            if (err) {
+                res.status(500).json({ error: err.message });
+                return;
+            }
+            res.json({ message: 'Movie updated successfully' });
+        }
+    );
+});
+
+// Delete a movie (Protected)
+app.delete('/api/movies/:id', adminAuth, (req, res) => {
+    const id = req.params.id;
+    db.run('DELETE FROM movies WHERE id = ?', [id], function (err) {
+        if (err) {
+            res.status(500).json({ error: err.message });
+            return;
+        }
+        res.json({ message: 'Movie deleted successfully' });
+    });
 });
 
 // Start the server

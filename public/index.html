@@ -3,30 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Movie Server</title>
+    <title>WORST FTP</title>
     <style>
-        body { font-family: sans-serif; background-color: #141414; color: white; margin: 0; }
-        header { padding: 20px; text-align: center; background-color: #000; }
-        h1 { margin: 0; color: #E50914; }
-        .genre-section { margin: 20px; }
-        .genre-title { text-transform: capitalize; border-bottom: 2px solid #333; padding-bottom: 10px; }
-        .movie-list { display: flex; overflow-x: auto; gap: 15px; padding: 10px 0; }
-        .movie-card { min-width: 200px; cursor: pointer; transition: transform 0.2s; }
-        .movie-card:hover { transform: scale(1.05); }
-        .movie-poster { width: 100%; height: 300px; object-fit: cover; border-radius: 5px; }
-        .movie-title { margin-top: 10px; font-size: 14px; text-align: center; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: white;
+            margin: 0;
+            min-height: 100vh;
+        }
+        header {
+            padding: 20px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+        h1 {
+            margin: 0;
+            font-size: 3em;
+            color: #00ffcc;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px #00ffcc, 0 0 20px #00ffcc, 0 0 40px #00ffcc;
+        }
+        .nav-links { margin-top: 15px; }
+        .nav-links a {
+            margin: 0 15px;
+            color: #fff;
+            text-transform: uppercase;
+            font-weight: bold;
+            transition: color 0.3s, text-shadow 0.3s;
+        }
+        .nav-links a:hover {
+            color: #ff00ff;
+            text-shadow: 0 0 10px #ff00ff;
+        }
+        .genre-section { margin: 40px 20px; }
+        .genre-title {
+            text-transform: capitalize;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+            padding-bottom: 10px;
+            font-size: 2em;
+            color: #f8f9fa;
+        }
+        .movie-list {
+            display: flex;
+            overflow-x: auto;
+            gap: 25px;
+            padding: 20px 10px;
+        }
+        .movie-list::-webkit-scrollbar { height: 10px; }
+        .movie-list::-webkit-scrollbar-thumb { background: #00ffcc; border-radius: 10px; }
+        .movie-list::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
+
+        .movie-card {
+            min-width: 220px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+        .movie-card:hover {
+            transform: translateY(-10px) scale(1.05);
+            box-shadow: 0 15px 30px rgba(0, 255, 204, 0.4);
+            border-color: #00ffcc;
+        }
+        .movie-poster {
+            width: 100%;
+            height: 330px;
+            object-fit: cover;
+            border-top-left-radius: 15px;
+            border-top-right-radius: 15px;
+        }
+        .movie-info {
+            padding: 15px;
+            text-align: center;
+        }
+        .movie-title {
+            font-size: 16px;
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .quality-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ff00ff;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            box-shadow: 0 0 10px #ff00ff;
+        }
         a { color: white; text-decoration: none; }
-        .nav-links { margin-top: 10px; }
-        .nav-links a { margin: 0 10px; color: #aaa; }
-        .nav-links a:hover { color: white; }
     </style>
 </head>
 <body>
     <header>
-        <h1>Movie Server</h1>
+        <h1>WORST FTP</h1>
         <div class="nav-links">
             <a href="/">Home</a>
-            <a href="/admin.html">Admin (Upload)</a>
+            <a href="/admin.html">Admin Dashboard</a>
         </div>
     </header>
 
@@ -74,12 +160,21 @@
                         img.src = movie.poster_url;
                         img.alt = movie.title;
 
+                        const qualityBadge = document.createElement('div');
+                        qualityBadge.className = 'quality-badge';
+                        qualityBadge.textContent = movie.quality || '1080p';
+
+                        const infoDiv = document.createElement('div');
+                        infoDiv.className = 'movie-info';
+
                         const titleText = document.createElement('div');
                         titleText.className = 'movie-title';
                         titleText.textContent = movie.title;
 
+                        infoDiv.appendChild(titleText);
                         card.appendChild(img);
-                        card.appendChild(titleText);
+                        card.appendChild(qualityBadge);
+                        card.appendChild(infoDiv);
                         list.appendChild(card);
                     });
 
@@ -88,7 +183,7 @@
                 }
 
                 if(movies.length === 0) {
-                    contentDiv.innerHTML = '<p style="text-align:center; margin-top: 50px;">No movies found. Go to Admin to upload some!</p>';
+                    contentDiv.innerHTML = '<h3 style="text-align:center; margin-top: 50px; color: #aaa;">No movies found. Go to Admin to upload some!</h3>';
                 }
 
             } catch (error) {
