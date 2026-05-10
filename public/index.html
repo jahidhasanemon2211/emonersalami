@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Server</title>
+    <style>
+        body { font-family: sans-serif; background-color: #141414; color: white; margin: 0; }
+        header { padding: 20px; text-align: center; background-color: #000; }
+        h1 { margin: 0; color: #E50914; }
+        .genre-section { margin: 20px; }
+        .genre-title { text-transform: capitalize; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .movie-list { display: flex; overflow-x: auto; gap: 15px; padding: 10px 0; }
+        .movie-card { min-width: 200px; cursor: pointer; transition: transform 0.2s; }
+        .movie-card:hover { transform: scale(1.05); }
+        .movie-poster { width: 100%; height: 300px; object-fit: cover; border-radius: 5px; }
+        .movie-title { margin-top: 10px; font-size: 14px; text-align: center; }
+        a { color: white; text-decoration: none; }
+        .nav-links { margin-top: 10px; }
+        .nav-links a { margin: 0 10px; color: #aaa; }
+        .nav-links a:hover { color: white; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Movie Server</h1>
+        <div class="nav-links">
+            <a href="/">Home</a>
+            <a href="/admin.html">Admin (Upload)</a>
+        </div>
+    </header>
+
+    <div id="content">
+        <!-- Movie genres will be injected here -->
+    </div>
+
+    <script>
+        async function fetchMovies() {
+            try {
+                const response = await fetch('/api/movies');
+                const movies = await response.json();
+
+                const genres = {};
+
+                // Group movies by genre
+                movies.forEach(movie => {
+                    if (!genres[movie.genre]) {
+                        genres[movie.genre] = [];
+                    }
+                    genres[movie.genre].push(movie);
+                });
+
+                const contentDiv = document.getElementById('content');
+
+                for (const genre in genres) {
+                    const section = document.createElement('div');
+                    section.className = 'genre-section';
+
+                    const title = document.createElement('h2');
+                    title.className = 'genre-title';
+                    title.textContent = genre;
+                    section.appendChild(title);
+
+                    const list = document.createElement('div');
+                    list.className = 'movie-list';
+
+                    genres[genre].forEach(movie => {
+                        const card = document.createElement('a');
+                        card.className = 'movie-card';
+                        card.href = `/player.html?id=${movie.id}`;
+
+                        const img = document.createElement('img');
+                        img.className = 'movie-poster';
+                        img.src = movie.poster_url;
+                        img.alt = movie.title;
+
+                        const titleText = document.createElement('div');
+                        titleText.className = 'movie-title';
+                        titleText.textContent = movie.title;
+
+                        card.appendChild(img);
+                        card.appendChild(titleText);
+                        list.appendChild(card);
+                    });
+
+                    section.appendChild(list);
+                    contentDiv.appendChild(section);
+                }
+
+                if(movies.length === 0) {
+                    contentDiv.innerHTML = '<p style="text-align:center; margin-top: 50px;">No movies found. Go to Admin to upload some!</p>';
+                }
+
+            } catch (error) {
+                console.error('Error fetching movies:', error);
+            }
+        }
+
+        fetchMovies();
+    </script>
+</body>
+</html>

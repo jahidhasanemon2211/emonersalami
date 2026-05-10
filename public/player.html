@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player - Movie Server</title>
+    <style>
+        body { font-family: sans-serif; background-color: #000; color: white; margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        header { width: 100%; padding: 20px; text-align: left; background-color: #111; box-sizing: border-box; }
+        header a { color: #E50914; text-decoration: none; font-weight: bold; font-size: 20px; }
+        #player-container { width: 80%; max-width: 1000px; margin-top: 30px; }
+        video { width: 100%; border-radius: 8px; outline: none; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .movie-info { margin-top: 20px; }
+        .title { font-size: 24px; margin-bottom: 5px; }
+        .genre { color: #aaa; font-size: 14px; margin-bottom: 15px; text-transform: capitalize;}
+        .description { line-height: 1.5; color: #ddd; }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="/">&larr; Back to Home</a>
+    </header>
+
+    <div id="player-container">
+        <!-- Video player and info will be injected here -->
+        <h2 id="loading">Loading...</h2>
+    </div>
+
+    <script>
+        async function fetchMovie() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const id = urlParams.get('id');
+
+            if (!id) {
+                document.getElementById('player-container').innerHTML = '<h2>Movie ID not provided.</h2>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/movies/${id}`);
+                if (!response.ok) {
+                    throw new Error('Movie not found');
+                }
+                const movie = await response.json();
+
+                const container = document.getElementById('player-container');
+                container.innerHTML = '';
+
+                const video = document.createElement('video');
+                video.controls = true;
+                video.autoplay = true;
+                const source = document.createElement('source');
+                source.src = movie.video_url;
+                source.type = 'video/mp4';
+                video.appendChild(source);
+
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'movie-info';
+
+                const titleDiv = document.createElement('div');
+                titleDiv.className = 'title';
+                titleDiv.textContent = movie.title;
+
+                const genreDiv = document.createElement('div');
+                genreDiv.className = 'genre';
+                genreDiv.textContent = 'Genre: ' + movie.genre;
+
+                const descDiv = document.createElement('div');
+                descDiv.className = 'description';
+                descDiv.textContent = movie.description;
+
+                infoDiv.appendChild(titleDiv);
+                infoDiv.appendChild(genreDiv);
+                infoDiv.appendChild(descDiv);
+
+                container.appendChild(video);
+                container.appendChild(infoDiv);
+
+            } catch (error) {
+                console.error('Error fetching movie:', error);
+                document.getElementById('player-container').innerHTML = `<h2>Error: ${error.message}</h2>`;
+            }
+        }
+
+        fetchMovie();
+    </script>
+</body>
+</html>
