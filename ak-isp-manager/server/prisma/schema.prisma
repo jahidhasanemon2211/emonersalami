@@ -1,0 +1,508 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// === ENUMS ===
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  MANAGER
+  SUPPORT
+  ACCOUNTANT
+  RESELLER
+  CUSTOMER
+}
+
+enum ConnectionType {
+  PPPOE
+  HOTSPOT
+  STATIC
+  BOTH
+}
+
+enum CustomerStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  EXPIRED
+  PENDING
+}
+
+enum IpType {
+  DYNAMIC
+  STATIC
+}
+
+enum InvoiceStatus {
+  UNPAID
+  PARTIAL
+  PAID
+  OVERDUE
+  CANCELLED
+  WAIVED
+}
+
+enum PaymentMethod {
+  CASH
+  BKASH
+  NAGAD
+  ROCKET
+  STRIPE
+  PAYPAL
+  SSLCOMMERZ
+  ADVANCE
+}
+
+enum RouterType {
+  MIKROTIK
+  OTHER
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+  REOPENED
+}
+
+enum NotificationChannel {
+  TELEGRAM
+  WHATSAPP
+  SMS
+  EMAIL
+  PUSH
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum TransactionType {
+  CREDIT
+  DEBIT
+  COMMISSION
+}
+
+enum SettingType {
+  STRING
+  JSON
+  BOOLEAN
+  NUMBER
+}
+
+enum BackupType {
+  MANUAL
+  AUTO
+}
+
+// === USERS & AUTH ===
+model User {
+  id               String    @id @default(uuid())
+  username         String    @unique
+  email            String    @unique
+  passwordHash     String
+  role             Role      @default(CUSTOMER)
+  twoFactorEnabled Boolean   @default(false)
+  twoFactorSecret  String?
+  profilePhoto     String?
+  isActive         Boolean   @default(true)
+  loginAttempts    Int       @default(0)
+  lockedUntil      DateTime?
+  lastLoginAt      DateTime?
+  lastLoginIp      String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime? // Soft delete
+
+  // Relations
+  customer       Customer?
+  employee       Employee?
+  reseller       Reseller?
+  sessions       Session[]
+  activityLogs   ActivityLog[]
+  ipRestrictions IpRestriction[]
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  refreshToken String   @unique
+  ipAddress    String?
+  userAgent    String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+}
+
+model ActivityLog {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  action     String
+  resource   String
+  resourceId String?
+  details    Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+}
+
+model IpRestriction {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  ipAddress   String
+  isWhitelist Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+// === CUSTOMER ===
+model Customer {
+  id         String    @id @default(uuid()) // Can use custom generator (AK-XXXX) before insert
+  userId     String    @unique
+  user       User      @relation(fields: [userId], references: [id])
+  resellerId String?
+  reseller   Reseller? @relation(fields: [resellerId], references: [id])
+
+  fullName       String
+  phone          String
+  alternatePhone String?
+  email          String?
+  nidNumber      String?
+  passportNumber String?
+  dateOfBirth    DateTime?
+
+  photo        String?
+  nidPhoto     String?
+  addressLine1 String
+  addressLine2 String?
+  area         String?
+  district     String?
+  division     String?
+  latitude     Float?
+  longitude    Float?
+
+  packageId      String
+  package        Package        @relation(fields: [packageId], references: [id])
+  connectionType ConnectionType
+  ipAddress      String?
+  macAddress     String?
+  connectionDate DateTime       @default(now())
+  expiryDate     DateTime?
+
+  status         CustomerStatus @default(PENDING)
+  monthlyBill    Float
+  dueAmount      Float          @default(0)
+  advanceBalance Float          @default(0)
+
+  mikrotikRouterId String?
+  router           Router? @relation(fields: [mikrotikRouterId], references: [id])
+  pppoeUsername    String?
+  pppoePassword    String?
+
+  notes     String?
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  customerNotes CustomerNote[]
+  invoices      Invoice[]
+  payments      Payment[]
+  onlineUsers   OnlineUser[]
+  bandwidthLogs BandwidthLog[]
+  tickets       Ticket[]
+}
+
+model CustomerNote {
+  id         String   @id @default(uuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  note       String
+  addedBy    String
+  createdAt  DateTime @default(now())
+}
+
+// === PACKAGE ===
+model Package {
+  id             String         @id @default(uuid())
+  name           String
+  description    String?
+  price          Float
+  currency       String         @default("BDT")
+  downloadSpeed  Int // in Mbps or Kbps
+  uploadSpeed    Int // in Mbps or Kbps
+  burstDownload  Int?
+  burstUpload    Int?
+  bandwidthQuota Int? // in GB, null if unlimited
+  isUnlimited    Boolean        @default(true)
+  ipType         IpType         @default(DYNAMIC)
+  validity       Int // in Days
+  connectionType ConnectionType @default(BOTH)
+  isActive       Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  customers Customer[]
+  invoices  Invoice[]
+}
+
+// === BILLING ===
+model Invoice {
+  id         String    @id @default(uuid()) // Custom ID INV-XXXX
+  customerId String
+  customer   Customer  @relation(fields: [customerId], references: [id])
+  packageId  String?
+  package    Package?  @relation(fields: [packageId], references: [id])
+  resellerId String?
+  reseller   Reseller? @relation(fields: [resellerId], references: [id])
+
+  amount      Float
+  discount    Float @default(0)
+  tax         Float @default(0)
+  totalAmount Float
+  paidAmount  Float @default(0)
+  dueAmount   Float
+
+  billingMonth Int
+  billingYear  Int
+  dueDate      DateTime
+  paidDate     DateTime?
+
+  status      InvoiceStatus @default(UNPAID)
+  generatedBy String?
+  notes       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  payments Payment[]
+}
+
+model Payment {
+  id         String   @id @default(uuid()) // Custom ID TXN-XXXX
+  invoiceId  String?
+  invoice    Invoice? @relation(fields: [invoiceId], references: [id])
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+
+  amount          Float
+  paymentMethod   PaymentMethod
+  transactionId   String?
+  gatewayResponse Json?
+
+  receivedBy String?
+  notes      String?
+  createdAt  DateTime @default(now())
+}
+
+model Expense {
+  id          String   @id @default(uuid())
+  category    String
+  amount      Float
+  description String?
+  date        DateTime @default(now())
+  paidBy      String?
+  attachment  String?
+  createdAt   DateTime @default(now())
+}
+
+// === MIKROTIK / NETWORK ===
+model Router {
+  id         String     @id @default(uuid())
+  name       String
+  ipAddress  String
+  port       Int        @default(8728)
+  username   String
+  password   String // encrypted
+  type       RouterType @default(MIKROTIK)
+  isActive   Boolean    @default(true)
+  location   String?
+  nasIp      String?
+  lastSyncAt DateTime?
+  createdAt  DateTime   @default(now())
+
+  customers     Customer[]
+  onlineUsers   OnlineUser[]
+  bandwidthLogs BandwidthLog[]
+}
+
+model OnlineUser {
+  id              String    @id @default(uuid())
+  customerId      String?
+  customer        Customer? @relation(fields: [customerId], references: [id])
+  routerId        String
+  router          Router    @relation(fields: [routerId], references: [id])
+  username        String
+  ipAddress       String
+  macAddress      String?
+  sessionId       String?
+  uptime          String?
+  downloadBytes   BigInt    @default(0)
+  uploadBytes     BigInt    @default(0)
+  signalStrength  String?
+  calledStationId String?
+  connectedAt     DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model BandwidthLog {
+  id            String    @id @default(uuid())
+  customerId    String?
+  customer      Customer? @relation(fields: [customerId], references: [id])
+  routerId      String
+  router        Router    @relation(fields: [routerId], references: [id])
+  downloadBytes BigInt    @default(0)
+  uploadBytes   BigInt    @default(0)
+  logDate       DateTime  @default(now())
+}
+
+// === EMPLOYEES & ROLES ===
+model Employee {
+  id          String    @id @default(uuid())
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id])
+  designation String
+  department  String
+  phone       String?
+  address     String?
+  nidNumber   String?
+  joiningDate DateTime?
+  salary      Float?
+  isActive    Boolean   @default(true)
+}
+
+model Permission {
+  id       String @id @default(uuid())
+  role     Role
+  resource String
+  actions  Json // JSON: [create,read,update,delete]
+}
+
+// === SUPPORT TICKETS ===
+model Ticket {
+  id         String   @id @default(uuid()) // TKT-XXXX
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  assignedTo String?
+
+  title       String
+  description String
+  category    String
+  priority    TicketPriority @default(MEDIUM)
+  status      TicketStatus   @default(OPEN)
+  attachments Json?
+
+  closedAt  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  replies TicketReply[]
+}
+
+model TicketReply {
+  id          String   @id @default(uuid())
+  ticketId    String
+  ticket      Ticket   @relation(fields: [ticketId], references: [id])
+  userId      String
+  message     String
+  attachments Json?
+  isInternal  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+// === NOTIFICATIONS ===
+model Notification {
+  id         String              @id @default(uuid())
+  userId     String?
+  customerId String?
+  type       String
+  channel    NotificationChannel
+  title      String?
+  message    String
+  status     NotificationStatus  @default(PENDING)
+  sentAt     DateTime?
+  createdAt  DateTime            @default(now())
+}
+
+model NotificationTemplate {
+  id        String              @id @default(uuid())
+  name      String
+  type      String
+  channel   NotificationChannel
+  subject   String?
+  body      String
+  variables Json?
+  isActive  Boolean             @default(true)
+}
+
+// === RESELLERS ===
+model Reseller {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id])
+  businessName     String
+  phone            String
+  address          String?
+  balance          Float    @default(0)
+  commissionRate   Float    @default(0)
+  creditLimit      Float    @default(0)
+  parentResellerId String?
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+
+  customers    Customer[]
+  invoices     Invoice[]
+  transactions ResellerTransaction[]
+}
+
+model ResellerTransaction {
+  id          String          @id @default(uuid())
+  resellerId  String
+  reseller    Reseller        @relation(fields: [resellerId], references: [id])
+  type        TransactionType
+  amount      Float
+  description String?
+  createdAt   DateTime        @default(now())
+}
+
+// === PAYMENTS GATEWAYS ===
+model PaymentGateway {
+  id        String   @id @default(uuid()) // E.g. BKASH, STRIPE
+  name      String   @unique
+  isActive  Boolean  @default(false)
+  config    Json // JSON: keys, secrets, mode
+  createdAt DateTime @default(now())
+}
+
+// === SETTINGS ===
+model Setting {
+  id        String      @id @default(uuid())
+  key       String      @unique
+  value     String // Stored as string, parse based on type
+  type      SettingType @default(STRING)
+  group     String
+  updatedAt DateTime    @updatedAt
+}
+
+model Backup {
+  id        String     @id @default(uuid())
+  filename  String
+  size      Int
+  type      BackupType @default(AUTO)
+  status    String
+  createdAt DateTime   @default(now())
+}
