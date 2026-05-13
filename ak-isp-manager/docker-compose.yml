@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  client:
+    build:
+      context: ./client
+      dockerfile: ../Dockerfile.client
+    container_name: ak-isp-client
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - server
+    networks:
+      - ak-isp-network
+    restart: unless-stopped
+
+  server:
+    build:
+      context: ./server
+      dockerfile: ../Dockerfile.server
+    container_name: ak-isp-server
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET}
+      - CORS_ORIGIN=http://localhost
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - ak-isp-network
+    restart: unless-stopped
+
+  db:
+    image: postgres:15-alpine
+    container_name: ak-isp-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-ak_isp_manager}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - ak-isp-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-ak_isp_manager}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: ak-isp-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ak-isp-network
+    restart: unless-stopped
+
+  adminer:
+    image: adminer
+    container_name: ak-isp-adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    networks:
+      - ak-isp-network
+    restart: unless-stopped
+
+networks:
+  ak-isp-network:
+    driver: bridge
+
+volumes:
+  db_data:
+  redis_data:
+  backup_data:
+  uploads:

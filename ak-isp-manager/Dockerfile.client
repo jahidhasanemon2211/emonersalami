@@ -1,0 +1,25 @@
+# Stage 1: Build React App
+FROM node:18-alpine as builder
+
+WORKDIR /app
+
+# Install dependencies
+COPY client/package*.json ./
+RUN npm ci
+
+# Copy source code and build
+COPY client/ ./
+RUN npm run build
+
+# Stage 2: Serve with Nginx
+FROM nginx:alpine
+
+# Copy built assets from builder stage
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy custom Nginx configuration
+COPY nginx/nginx.conf /etc/nginx/nginx.conf
+
+EXPOSE 80 443
+
+CMD ["nginx", "-g", "daemon off;"]
